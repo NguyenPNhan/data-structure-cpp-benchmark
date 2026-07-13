@@ -36,61 +36,58 @@ private:
     }
 
     static Node* splay(Node* node, int value) {
-        if (node == nullptr || node->value == value) {
+        if (node == nullptr) {
             return node;
         }
 
-        if (value < node->value) {
-            if (node->left == nullptr) {
-                return node;
-            }
+        Node temporaryRoot(value);
+        Node* leftTreeMaximum = &temporaryRoot;
+        Node* rightTreeMinimum = &temporaryRoot;
 
-            if (value < node->left->value) {
-                node->left->left =
-                    splay(node->left->left, value);
-
-                node = rotateRight(node);
-            }
-            else if (value > node->left->value) {
-                node->left->right =
-                    splay(node->left->right, value);
-
-                if (node->left->right != nullptr) {
-                    node->left = rotateLeft(node->left);
+        while (true) {
+            if (value < node->value) {
+                if (node->left == nullptr) {
+                    break;
                 }
+
+                if (value < node->left->value) {
+                    node = rotateRight(node);
+
+                    if (node->left == nullptr) {
+                        break;
+                    }
+                }
+
+                rightTreeMinimum->left = node;
+                rightTreeMinimum = node;
+                node = node->left;
+            } else if (value > node->value) {
+                if (node->right == nullptr) {
+                    break;
+                }
+
+                if (value > node->right->value) {
+                    node = rotateLeft(node);
+
+                    if (node->right == nullptr) {
+                        break;
+                    }
+                }
+
+                leftTreeMaximum->right = node;
+                leftTreeMaximum = node;
+                node = node->right;
+            } else {
+                break;
             }
-
-            if (node->left == nullptr) {
-                return node;
-            }
-
-            return rotateRight(node);
         }
 
-        if (node->right == nullptr) {
-            return node;
-        }
+        leftTreeMaximum->right = node->left;
+        rightTreeMinimum->left = node->right;
+        node->left = temporaryRoot.right;
+        node->right = temporaryRoot.left;
 
-        if (value < node->right->value) {
-            node->right->left =
-                splay(node->right->left, value);
-
-            if (node->right->left != nullptr) {
-                node->right = rotateRight(node->right);
-            }
-        }
-        else if (value > node->right->value) {
-            node->right->right =
-                splay(node->right->right, value);
-
-            node = rotateLeft(node);
-        }
-
-        if (node->right == nullptr) {
-            return node;
-        }
-
-        return rotateLeft(node);
+        return node;
     }
 
     static void destroy(Node* node) {
