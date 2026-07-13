@@ -39,27 +39,6 @@ DataStructure* createDataStructure() {
     return new Structure();
 }
 
-inline const std::vector<Target>& targets() {
-    static const std::vector<Target> allTargets{
-        {
-            "Adelson-Velsky-Landis Tree",
-            &createDataStructure<AdelsonVelskyLandisTree>
-        },
-        {"Binary Heap", &createDataStructure<BinaryHeap>},
-        {"Binary Search Tree", &createDataStructure<BinarySearchTree>},
-        {"Binary Search Trie", &createDataStructure<BinarySearchTrie>},
-        {"Cuckoo Hash Table", &createDataStructure<CuckooHashTable>},
-        {"Hash Table", &createDataStructure<HashTable>},
-        {"Linked List", &createDataStructure<LinkedList>},
-        {"Red-Black Tree", &createDataStructure<RedBlackTree>},
-        {"Sorted Array", &createDataStructure<SortedArray>},
-        {"Splay Tree", &createDataStructure<SplayTree>},
-        {"Treap", &createDataStructure<Treap>}
-    };
-
-    return allTargets;
-}
-
 inline const std::vector<std::size_t>& sizes() {
     static const std::vector<std::size_t> allSizes{
         1000,
@@ -169,106 +148,151 @@ inline void verifyInserted(
 }
 
 inline void runInsertCase(
+    const Target& target,
     const char* caseName,
     const std::vector<int>& values
 ) {
-    const std::vector<Target>& allTargets = targets();
+    std::unique_ptr<DataStructure> structure(target.create());
 
-    for (std::size_t targetIndex = 0;
-         targetIndex < allTargets.size();
-         ++targetIndex) {
-        const Target& target = allTargets[targetIndex];
-        std::unique_ptr<DataStructure> structure(target.create());
+    const double milliseconds = elapsedMilliseconds([&]() {
+        for (std::size_t index = 0; index < values.size(); ++index) {
+            structure->insert(values[index]);
+        }
+    });
 
-        const double milliseconds = elapsedMilliseconds([&]() {
-            for (std::size_t index = 0; index < values.size(); ++index) {
-                structure->insert(values[index]);
-            }
-        });
-
-        verifyInserted(*structure, values, target.name);
-        printResult(caseName, target.name, milliseconds);
-    }
+    verifyInserted(*structure, values, target.name);
+    printResult(caseName, target.name, milliseconds);
 }
 
 inline void runRemoveCase(
+    const Target& target,
     const std::vector<int>& insertedValues,
     const std::vector<int>& removedValues
 ) {
-    const std::vector<Target>& allTargets = targets();
+    std::unique_ptr<DataStructure> structure(target.create());
 
-    for (std::size_t targetIndex = 0;
-         targetIndex < allTargets.size();
-         ++targetIndex) {
-        const Target& target = allTargets[targetIndex];
-        std::unique_ptr<DataStructure> structure(target.create());
-
-        for (std::size_t index = 0;
-             index < insertedValues.size();
-             ++index) {
-            structure->insert(insertedValues[index]);
-        }
-
-        const double milliseconds = elapsedMilliseconds([&]() {
-            for (std::size_t index = 0;
-                 index < removedValues.size();
-                 ++index) {
-                structure->remove(removedValues[index]);
-            }
-        });
-
-        if (structure->search(removedValues.front()) ||
-            structure->search(removedValues[removedValues.size() >> 1]) ||
-            structure->search(removedValues.back())) {
-            throw std::runtime_error(
-                std::string(target.name) + " failed removal validation"
-            );
-        }
-
-        printResult("remove", target.name, milliseconds);
+    for (std::size_t index = 0;
+         index < insertedValues.size();
+         ++index) {
+        structure->insert(insertedValues[index]);
     }
+
+    const double milliseconds = elapsedMilliseconds([&]() {
+        for (std::size_t index = 0;
+             index < removedValues.size();
+             ++index) {
+            structure->remove(removedValues[index]);
+        }
+    });
+
+    if (structure->search(removedValues.front()) ||
+        structure->search(removedValues[removedValues.size() >> 1]) ||
+        structure->search(removedValues.back())) {
+        throw std::runtime_error(
+            std::string(target.name) + " failed removal validation"
+        );
+    }
+
+    printResult("remove", target.name, milliseconds);
 }
 
 inline void runSearchCase(
+    const Target& target,
     const char* caseName,
     const std::vector<int>& insertedValues,
     const std::vector<int>& searchedValues,
     std::size_t expectedMatches
 ) {
-    const std::vector<Target>& allTargets = targets();
+    std::unique_ptr<DataStructure> structure(target.create());
 
-    for (std::size_t targetIndex = 0;
-         targetIndex < allTargets.size();
-         ++targetIndex) {
-        const Target& target = allTargets[targetIndex];
-        std::unique_ptr<DataStructure> structure(target.create());
-
-        for (std::size_t index = 0;
-             index < insertedValues.size();
-             ++index) {
-            structure->insert(insertedValues[index]);
-        }
-
-        std::size_t matchCount = 0;
-
-        const double milliseconds = elapsedMilliseconds([&]() {
-            for (std::size_t index = 0;
-                 index < searchedValues.size();
-                 ++index) {
-                if (structure->search(searchedValues[index])) {
-                    ++matchCount;
-                }
-            }
-        });
-
-        if (matchCount != expectedMatches) {
-            throw std::runtime_error(
-                std::string(target.name) + " failed search validation"
-            );
-        }
-
-        printResult(caseName, target.name, milliseconds);
+    for (std::size_t index = 0;
+         index < insertedValues.size();
+         ++index) {
+        structure->insert(insertedValues[index]);
     }
+
+    std::size_t matchCount = 0;
+
+    const double milliseconds = elapsedMilliseconds([&]() {
+        for (std::size_t index = 0;
+             index < searchedValues.size();
+             ++index) {
+            if (structure->search(searchedValues[index])) {
+                ++matchCount;
+            }
+        }
+    });
+
+    if (matchCount != expectedMatches) {
+        throw std::runtime_error(
+            std::string(target.name) + " failed search validation"
+        );
+    }
+
+    printResult(caseName, target.name, milliseconds);
+}
+
+inline void runAllBenchmarks(const Target& target) {
+    const std::vector<std::size_t>& allSizes = sizes();
+
+    for (std::size_t sizeIndex = 0;
+         sizeIndex < allSizes.size();
+         ++sizeIndex) {
+        const std::size_t size = allSizes[sizeIndex];
+        const std::vector<int> random =
+            randomValues(size, 0x13579bdfu);
+        const std::vector<int> increasing = increasingValues(size);
+        const std::vector<int> smallShuffle =
+            smallShuffleValues(size, 0x2468ace0u);
+        const std::vector<int> removedValues =
+            randomValues(size, 0x50607080u);
+        const std::vector<int> searchValues =
+            randomValues(size, 0x89abcdefu);
+        const std::size_t reducedSize = size / 10;
+        const std::vector<int> reducedSearchValues(
+            searchValues.begin(),
+            searchValues.begin() + reducedSize
+        );
+
+        printSize(size);
+        runInsertCase(target, "random", random);
+        runInsertCase(target, "increasing", increasing);
+        runInsertCase(target, "small shuffle", smallShuffle);
+        runRemoveCase(target, random, removedValues);
+        runSearchCase(target, "search all", searchValues, searchValues, size);
+        runSearchCase(
+            target,
+            "small search large insert",
+            searchValues,
+            reducedSearchValues,
+            reducedSize
+        );
+        runSearchCase(
+            target,
+            "large search small insert",
+            reducedSearchValues,
+            searchValues,
+            reducedSize
+        );
+        std::cout << '\n';
+    }
+}
+
+template <typename Structure>
+int runAllBenchmarks(const char* structureName) {
+    try {
+        const Target target{
+            structureName,
+            &createDataStructure<Structure>
+        };
+
+        runAllBenchmarks(target);
+    } catch (const std::exception& error) {
+        std::cerr << "benchmark failed: " << error.what() << '\n';
+        return 1;
+    }
+
+    return 0;
 }
 
 }
