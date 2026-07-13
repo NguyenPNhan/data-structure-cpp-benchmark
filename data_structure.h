@@ -1,6 +1,10 @@
+#pragma once
+
 class DataStructure {
-protected:
-    virtual void insert(){}
-    virtual void remove(){};
-    virtual bool search(){};
+public:
+    virtual ~DataStructure() = default;
+
+    virtual void insert(int value) = 0;
+    virtual void remove(int value) = 0;
+    virtual bool search(int value) const = 0;
 };
